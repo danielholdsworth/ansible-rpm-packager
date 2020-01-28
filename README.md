@@ -1,7 +1,7 @@
 # ansible-rpm-packager
 Ansible Play that creates RPM Packages from URL.
 
-#Dependencies
+<h2>Dependencies</h2>
 <ol>
   <li>Ansible</li>
   <li>`rpmbuild` module</li>
@@ -9,7 +9,7 @@ Ansible Play that creates RPM Packages from URL.
   <li>A `unix` machine </li>
 </ol>
 
-#How to use
+<h2>How to use</h2>
 
 `python rpm.py`
 
