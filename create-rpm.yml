@@ -26,18 +26,18 @@
       shell: "sed  -i '1i /usr/share/wordpress/wp-content/plugins/{{ package }}/' /home/builder/final_content.txt"
 
 ###########################################################################
-#    - name: Remove text files
-#      file:
-#        path: "/home/builder/content.txt"
-#        state: absent
-#    - name: Remove text files
-#      file:
-#        path: "/home/builder/cut-content.txt"
-#        state: absent
-#    - name: Remove text files
-#      file:
-#        path: "/home/builder/new-content.txt"
-#        state: absent
+    - name: Remove text files
+      file:
+        path: "/home/builder/content.txt"
+        state: absent
+    - name: Remove text files
+      file:
+        path: "/home/builder/cut-content.txt"
+        state: absent
+    - name: Remove text files
+      file:
+        path: "/home/builder/new-content.txt"
+        state: absent
 ##########################################################################
 
     - name: remove this temp file
@@ -93,18 +93,7 @@
         owner: builder
         group: builder
 
-- name: Move RPMS to YUM repo
-  hosts: artemis
-  become: yes
-  tasks:
-    - name: move rpm to yum repo
-      shell: "cp /home/builder/rpmbuild/RPMS/noarch/{{ package }}* /repos/CentOS/7/Packages/"
-
-    - name: refresh YUM repo after adding new RPM
-      shell: 'createrepo --update /repos/CentOS/'
-
-
 ############################################# CLEAN UP #######################
 
- #   - name: cleaning up files
- #     shell: 'rm -rf /home/builder/*.txt'
+    - name: cleaning up files
+      shell: 'rm -rf /home/builder/*.txt'
