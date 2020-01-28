@@ -1,0 +1,110 @@
+- name: Create an RPM Package from a download link
+  hosts: artemis
+  tasks:
+    - name: download zip to get contents
+      get_url:
+        url: "{{ url }}"
+        dest: /home/builder/
+
+    - name: grab contents of package
+      shell: 'unzip -l /home/builder/*.zip > /home/builder/content.txt'
+
+    - name: strip file of unwanted lines
+      shell: awk '/{{ package }}\//' /home/builder/content.txt > /home/builder/cut_content.txt
+
+    - name: strip file of unwanted lines
+      become: yes
+      shell: ed "/home/builder/cut_content.txt" <<<$'1d\nwq\n'
+
+    - name: remove all before package name
+      shell: "sed 's/.*{{ package }}\\//\\/{{ package }}\\//' /home/builder/cut_content.txt > /home/builder/new_content.txt"
+
+    - name: add prefix to files
+      shell: "sed 's/.*\\/{{ package }}\\//\\/usr\\/share\\/wordpress\\/wp-content\\/plugins\\/{{ package }}\\//' /home/builder/new_content.txt > /home/builder/final_content.txt"
+
+    - name: finalize content file
+      shell: "sed  -i '1i /usr/share/wordpress/wp-content/plugins/{{ package }}/' /home/builder/final_content.txt"
+
+###########################################################################
+#    - name: Remove text files
+#      file:
+#        path: "/home/builder/content.txt"
+#        state: absent
+#    - name: Remove text files
+#      file:
+#        path: "/home/builder/cut-content.txt"
+#        state: absent
+#    - name: Remove text files
+#      file:
+#        path: "/home/builder/new-content.txt"
+#        state: absent
+##########################################################################
+
+    - name: remove this temp file
+      command: "rm -rf /home/builder/{{ package }}*.zip"
+
+    - name: download & unzip .zip
+      unarchive:
+        src: "{{ url }}"
+        dest: /home/builder/
+        remote_src: yes
+
+    - name: tar new package
+      archive:
+        path: "/home/builder/{{ package }}"
+        dest: "/home/builder/{{ package }}.tar.gz"
+
+    - name: Recursively remove un-compressed package
+      file:
+        path: "/home/builder/{{ package }}"
+        state: absent
+
+    - name: remove this .zip file
+      command: "rm -rf /home/builder/{{ package }}*.zip"
+
+    - name: Move .tar into SOURCES folder
+      shell: "mv /home/builder/{{ package }}.tar.gz /home/builder/rpmbuild/SOURCES/"
+
+    - name: Remove existing .tar.gz file
+      file:
+        path: "/home/builder/{{ package }}.tar.gz"
+        state: absent
+
+- name: Create spec file
+  hosts: artemis
+  become: true
+  roles:
+    - ./rpm-specfile
+
+- name: build final RPM
+  hosts: artemis
+  become: yes
+  become_user: builder
+  tasks:
+    - name: Use rpm build to create rpm
+      shell: "rpmbuild -bb /home/builder/rpmbuild/SPECS/{{ package }}.spec"
+      register: out
+    - debug: var=out.stdout_lines
+
+
+    - name: Change permissions to builder
+      file:
+        path: "/home/builder/rpmbuild/RPMS/noarch/{{ package }}-1.1.0-1.noarch.rpm"
+        owner: builder
+        group: builder
+
+- name: Move RPMS to YUM repo
+  hosts: artemis
+  become: yes
+  tasks:
+    - name: move rpm to yum repo
+      shell: "cp /home/builder/rpmbuild/RPMS/noarch/{{ package }}* /repos/CentOS/7/Packages/"
+
+    - name: refresh YUM repo after adding new RPM
+      shell: 'createrepo --update /repos/CentOS/'
+
+
+############################################# CLEAN UP #######################
+
+ #   - name: cleaning up files
+ #     shell: 'rm -rf /home/builder/*.txt'
